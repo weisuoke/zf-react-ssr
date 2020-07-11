@@ -1,5 +1,21 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import Counter from '../containers/Counter';
+import React, { Fragment } from 'react'
+import ReactDOM from 'react-dom'
+import routes from '../routes'
+import Header from '../components/Header'
+import { BrowserRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import { getClientStore } from '../store'
 
-ReactDOM.hydrate(<Counter/>,document.querySelector('#root'));
+ReactDOM.hydrate(
+  <Provider store={getClientStore()}>
+    <BrowserRouter>
+      <Fragment>
+        <Header/>
+        <div className="container" style={{marginTop:50}}>
+          {routes}
+        </div>
+      </Fragment>
+    </BrowserRouter>
+  </Provider>
+  , document.querySelector('#root')
+)
