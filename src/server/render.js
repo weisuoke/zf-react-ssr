@@ -1,5 +1,5 @@
 import React, { Fragment } from 'react'
-import { StaticRouter } from 'react-router'
+import { StaticRouter, matchPath, Route } from 'react-router-dom'
 import { renderToString } from 'react-dom/server'
 import Header from '../components/Header'
 import routes from '../routes'
@@ -9,20 +9,34 @@ import { getServerStore } from '../store'
 export default function(req, res) {
   let context = {}
   let store = getServerStore()
-  let html = renderToString(
-    <Provider store={store}>
-      <StaticRouter context={context} location={req.path}>
-        <Fragment>
-          <Header/>
-          <div className="container" style={{marginTop:50}}>
-            {routes}
-          </div>
-        </Fragment>
-      </StaticRouter>
-    </Provider>
-  )
-  res.send(
-    `
+  // matchPath 是路由提供的工具方法，可以用来判断路径和路由对象是否匹配
+  let matchRoutes = routes.filter(route => (
+    matchPath(req.path, route)
+  ))
+  let promises = [];
+  matchRoutes.forEach(route => {
+    if (route.loadData) {
+      promises.push(route.loadData(store))
+    }
+  })
+  Promise.all(promises).then(function() {
+    console.log('🆚', store.getState())
+    let html = renderToString(
+      <Provider store={store}>
+        <StaticRouter context={context} location={req.path}>
+          <Fragment>
+            <Header/>
+            <div className="container" style={{marginTop:50}}>
+              {routes.map(route => (
+                <Route {...route}/>
+              ))}
+            </div>
+          </Fragment>
+        </StaticRouter>
+      </Provider>
+    )
+    res.send(
+      `
       <html>
         <head>
           <meta charset="UTF-8">
@@ -34,9 +48,15 @@ export default function(req, res) {
         </head>
         <body>
           <div id="root">${html}</div>
+          <script>
+            window.context = {
+              state: ${JSON.stringify(store.getState())}
+            }
+          </script>
           <script src="/client.js"></script>
         </body>
       </html>
     `
-  )
+    )
+  })
 }
